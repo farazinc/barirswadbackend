@@ -22,23 +22,13 @@ jobs:
       - name: Copy project files to VPS
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "mkdir -p ~/djangoapi"
-          rsync -avz --exclude '.git' --exclude '__pycache__' ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:~/djangoapi
+          rsync -avz -e "ssh -o StrictHostKeyChecking=no" --exclude '.git' --exclude '__pycache__' ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:~/djangoapi
 
       - name: Create .env on VPS
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "
-          cat > ~/djangoapi/.env <<EOL
-SECRET_KEY=${{ secrets.SECRET_KEY }}
-DEBUG=False
-ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
-GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=farazincapp@gmail.com
-EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}
-EOL
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cat > ~/djangoapi/.env <<EOL
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          EOL
           "
 
       - name: Deploy using Docker Compose on VPS
@@ -47,11 +37,10 @@ EOL
             set -e
             cd ~/djangoapi
 
-            # Use docker compose if available, else fall back
-            if docker compose version >/dev/null 2>&1; then
-              DC="docker compose"
-            else
+            if command -v docker-compose >/dev/null 2>&1; then
               DC="docker-compose"
+            else
+              DC="docker compose"
             fi
 
             $DC down --remove-orphans
