@@ -26,8 +26,8 @@ jobs:
 
       - name: Create .env on VPS
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "cat > ~/djangoapi/.env <<EOL
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} " <<EOL
+
           EOL
           "
 
