@@ -14,7 +14,7 @@ services:
       - media_data:/app/media
       - sqlite_data:/app/db_data
     ports:
-      - "8000:8000"
+      - "8080:8080"
     environment:
       DJANGO_DEBUG: "1"
 
