@@ -3,12 +3,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from .models import Kitchen, Food, Order
 from .serializers import KitchenSerializer, FoodSerializer, OrderSerializer
 
 class KitchenViewSet(viewsets.ModelViewSet):
     queryset = Kitchen.objects.all().order_by('-rating')
     serializer_class = KitchenSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     search_fields = ['name', 'owner_name']
     ordering_fields = ['rating', 'total_orders', 'created_at']
@@ -16,6 +18,7 @@ class KitchenViewSet(viewsets.ModelViewSet):
 
 class FoodViewSet(viewsets.ModelViewSet):
     serializer_class = FoodSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     search_fields = ["name", "kitchen_name", "description"]
     ordering_fields = ["price", "delivery_time", "created_at", "kitchen__rating"]
@@ -50,7 +53,6 @@ class FoodPaginator(PageNumberPagination):
     max_page_size = 20
 
 
-
 @api_view(["GET"])
 def homepage(request):
     from rest_framework.pagination import PageNumberPagination
@@ -71,7 +73,6 @@ def homepage(request):
         k["foods"] = FoodSerializer(food_page, many=True, context={"request": request}).data
 
     return kitchen_paginator.get_paginated_response(kitchen_data)
-
 
 
 @api_view(["POST"])
@@ -127,3 +128,51 @@ def user_orders(request):
     orders = Order.objects.filter(user=request.user).order_by("-created_at")
     serializer = OrderSerializer(orders, many=True)
     return Response(serializer.data)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def seller_orders(request):
+    """Get all orders for seller's kitchens"""
+    user = request.user
+    
+    seller_kitchens = Kitchen.objects.filter(owner_id=str(user.id))
+    
+    seller_foods = Food.objects.filter(kitchen__in=seller_kitchens)
+    
+    orders = Order.objects.filter(food__in=seller_foods).order_by("-created_at")
+    
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def update_order_status(request, order_id):
+    """Update order status - only by seller who owns the kitchen"""
+    user = request.user
+    
+    try:
+        order = Order.objects.select_related('food__kitchen').get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({"error": "Order not found"}, status=404)
+    
+    # Check if user owns the kitchen
+    if str(order.food.kitchen.owner_id) != str(user.id):
+        return Response({"error": "Not authorized"}, status=403)
+    
+    new_status = request.data.get("status")
+    if not new_status:
+        return Response({"error": "Status required"}, status=400)
+    
+    if new_status not in dict(Order.STATUS_CHOICES):
+        return Response({"error": "Invalid status"}, status=400)
+    
+    order.status = new_status
+    order.save()
+    
+    # Update kitchen total_orders when delivered
+    if new_status == "delivered":
+        order.food.kitchen.total_orders += 1
+        order.food.kitchen.save()
+    
+    return Response(OrderSerializer(order).data)

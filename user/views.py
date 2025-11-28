@@ -6,6 +6,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate
 from .models import UserProfile
 from .serializers import RegisterSerializer, LoginSerializer, UserSerializer
+from rest_framework.authtoken.models import Token
 
 
 @api_view(['POST'])
@@ -30,7 +31,17 @@ def register(request):
         role=data.get('role', 'user')  # default to 'user'
     )
 
-    return Response({"message": f"{data.get('role', 'user').capitalize()} registered"}, status=201)
+    # Generate token for new user
+    token = Token.objects.create(user=user)
+
+    return Response({
+        "message": f"{data.get('role', 'user').capitalize()} registered",
+        "token": token.key,
+        "uid": user.id,
+        "name": data['name'],
+        "email": user.email,
+        "role": data.get('role', 'user')
+    }, status=201)
 
 
 
@@ -44,13 +55,17 @@ def login(request):
     if user is None:
         return Response({"error": "Invalid credentials"}, status=401)
 
+    # Get or create token
+    token, created = Token.objects.get_or_create(user=user)
+
     return Response({
         "uid": user.id,
         "name": user.profile.name,
         "email": user.email,
         "profilePic": user.profile.profilePic,
         "role": user.profile.role,
-        "createdAt": str(user.profile.createdAt)
+        "createdAt": str(user.profile.createdAt),
+        "token": token.key  # ADD THIS LINE
     })
 
 

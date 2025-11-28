@@ -1,8 +1,9 @@
 from rest_framework import serializers
+from django.conf import settings
 from .models import Food, Kitchen, Order
 
 class KitchenSerializer(serializers.ModelSerializer):
-    imageUrl = serializers.ReadOnlyField()
+    imageUrl = serializers.SerializerMethodField()
 
     class Meta:
         model = Kitchen
@@ -12,14 +13,23 @@ class KitchenSerializer(serializers.ModelSerializer):
             "created_at", "imageUrl"
         ]
 
+    def get_imageUrl(self, obj):
+        request = self.context.get('request')
+        if obj.image:
+            return request.build_absolute_uri(obj.image.url) if request else settings.MEDIA_URL + obj.image.name
+        return None
+
 
 class FoodSerializer(serializers.ModelSerializer):
-    imageUrl = serializers.ReadOnlyField()
+    imageUrl = serializers.SerializerMethodField()
     kitchen = serializers.PrimaryKeyRelatedField(queryset=Kitchen.objects.all())
-    kitchenName = serializers.CharField(source="kitchen_name")
+    kitchenName = serializers.CharField(source="kitchen_name", read_only=True)
     deliveryTime = serializers.IntegerField(source="delivery_time")
     deliveryStatus = serializers.ChoiceField(
-        source="delivery_status", choices=Food.DELIVERY_CHOICES
+        source="delivery_status",
+        choices=Food.DELIVERY_CHOICES,
+        required=False,
+        default="pending"
     )
 
     class Meta:
@@ -30,7 +40,28 @@ class FoodSerializer(serializers.ModelSerializer):
             "deliveryTime", "deliveryStatus",
             "image", "created_at", "imageUrl"
         ]
-        extra_kwargs = {"image": {"required": False, "allow_null": True}}
+        extra_kwargs = {
+            "image": {"required": False, "allow_null": True},
+        }
+
+    def get_imageUrl(self, obj):
+        request = self.context.get('request')
+        if obj.image:
+            return request.build_absolute_uri(obj.image.url) if request else settings.MEDIA_URL + obj.image.name
+        return None
+
+    def create(self, validated_data):
+        # Get kitchen from validated data
+        kitchen = validated_data.get('kitchen')
+        
+        # Auto-populate kitchen_name from the kitchen object
+        validated_data['kitchen_name'] = kitchen.name
+        
+        # Set default delivery_status if not provided
+        if 'delivery_status' not in validated_data:
+            validated_data['delivery_status'] = 'pending'
+        
+        return super().create(validated_data)
 
 
 class OrderSerializer(serializers.ModelSerializer):
