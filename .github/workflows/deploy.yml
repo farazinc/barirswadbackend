@@ -44,6 +44,6 @@ jobs:
             fi
 
             $DC down --remove-orphans
-            $DC build web --no-cache
+            $DC build --no-cache web
             $DC up -d web
           EOF
