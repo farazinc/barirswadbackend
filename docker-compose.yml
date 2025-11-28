@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  web:
+    build: .
+    container_name: food_web
+    command: >
+      sh -c "
+        python manage.py makemigrations --noinput &&
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    volumes:
+      - .:/app
+      - media_data:/app/media
+      - sqlite_data:/app/db_data
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_DEBUG: "1"
+
+volumes:
+  media_data:
+  sqlite_data:
