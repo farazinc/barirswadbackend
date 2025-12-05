@@ -8,6 +8,7 @@ class Kitchen(models.Model):
     owner_name = models.CharField(max_length=120)
     image = models.ImageField(upload_to="kitchens/", null=True, blank=True)
     rating = models.FloatField(default=0)
+    rating_count = models.IntegerField(default=0)
     total_orders = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

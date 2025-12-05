@@ -65,7 +65,7 @@ def login(request):
         "profilePic": user.profile.profilePic,
         "role": user.profile.role,
         "createdAt": str(user.profile.createdAt),
-        "token": token.key  # ADD THIS LINE
+        "token": token.key  
     })
 
 

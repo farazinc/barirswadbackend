@@ -86,16 +86,27 @@ def rate_kitchen(request, kitchen_id):
     if rating is None:
         return Response({"error": "Rating required"}, status=400)
 
-    rating = float(rating)
+    try:
+        rating = float(rating)
+    except (ValueError, TypeError):
+        return Response({"error": "Invalid rating format"}, status=400)
+    
     if not 1 <= rating <= 5:
-        return Response({"error": "Rating must be 1–5"}, status=400)
+        return Response({"error": "Rating must be between 1 and 5"}, status=400)
 
-    # Simple average (can improve with real rating count)
-    kitchen.rating = (kitchen.rating + rating) / 2
+    # Calculate proper average rating
+    total_rating = kitchen.rating * kitchen.rating_count  # Get sum of all previous ratings
+    total_rating += rating  # Add new rating
+    kitchen.rating_count += 1  # Increment count
+    kitchen.rating = round(total_rating / kitchen.rating_count, 2)  # Calculate new average
+    
     kitchen.save()
 
-    return Response({"message": "Rating submitted", "newRating": kitchen.rating})
-
+    return Response({
+        "message": "Rating submitted successfully",
+        "newRating": kitchen.rating,
+        "totalRatings": kitchen.rating_count
+    })
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])

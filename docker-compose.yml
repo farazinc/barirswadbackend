@@ -11,8 +11,8 @@ services:
       "
     volumes:
       - .:/app
-      - /home/prodback/djangoapi/media:/app/media  
-      - /home/prodback/djangoapi/staticfiles:/app/staticfiles 
+      - /home/prodback/djangoapi/media:/app/media
+      - /home/prodback/djangoapi/staticfiles:/app/staticfiles
     ports:
       - "8080:8080"
     environment:

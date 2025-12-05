@@ -9,7 +9,7 @@ class KitchenSerializer(serializers.ModelSerializer):
         model = Kitchen
         fields = [
             "id", "name", "owner_id", "owner_name",
-            "image", "rating", "total_orders",
+            "image", "rating","rating_count", "total_orders",
             "created_at", "imageUrl"
         ]
 
